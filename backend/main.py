@@ -112,12 +112,12 @@ def compose_sticker(name: str, phone: str) -> Image.Image:
     panel_w = panel[2] - panel[0]
     panel_h = panel[3] - panel[1]
     # QR etrafındaki boşluk sıfıra yakın olsun
-    qr_padding = 0
+    qr_padding = 1
     max_qr_w = panel_w - 2 * qr_padding
     max_qr_h = panel_h - 2 * qr_padding
     base_scale = min(max_qr_w / qr_img.width, max_qr_h / qr_img.height)
     # Çok az küçült (yaklaşık %3)
-    scale = max(0.1, base_scale * 0.94)
+    scale = max(0.1, base_scale * 0.92)
     qr_img = qr_img.resize((int(qr_img.width * scale), int(qr_img.height * scale)), Image.LANCZOS)
     qr_x = panel[0] + (panel_w - qr_img.width) // 2
     qr_y = panel[1] + (panel_h - qr_img.height) // 2

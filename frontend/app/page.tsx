@@ -34,6 +34,13 @@ export default function Home() {
     previewUrl: null,
   });
 
+  const toSafeFileName = (rawName: string): string => {
+    const normalized = (rawName || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const lower = normalized.toLowerCase();
+    const kebab = lower.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return kebab || "sticker";
+  };
+
   const handleChange = (field: "name" | "phone") => (e: React.ChangeEvent<HTMLInputElement>) => {
     setState((s) => ({ ...s, [field]: e.target.value }));
   };
@@ -85,7 +92,8 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `sticker.${format}`;
+      const safe = toSafeFileName(state.name);
+      a.download = `${safe}.${format}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
