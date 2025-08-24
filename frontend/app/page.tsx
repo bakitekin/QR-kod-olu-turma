@@ -38,7 +38,7 @@ export default function Home() {
     setState((s) => ({ ...s, [field]: e.target.value }));
   };
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+  const API_BASE = ""; // Proxy kullanıyoruz: /api/generate_sticker/*
 
   const generatePreview = async () => {
     const errors = validate({ name: state.name, phone: state.phone });
@@ -49,7 +49,7 @@ export default function Home() {
     }
     setState((s) => ({ ...s, loading: true, errors: {} }));
     try {
-      const resp = await fetch(`${API_BASE}/api/generate_sticker/png`, {
+      const resp = await fetch(`/api/generate_sticker/png`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: state.name, phone: state.phone }),
@@ -75,7 +75,7 @@ export default function Home() {
     }
     setState((s) => ({ ...s, loading: true }));
     try {
-      const resp = await fetch(`${API_BASE}/api/generate_sticker/${format}`, {
+      const resp = await fetch(`/api/generate_sticker/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: state.name, phone: state.phone }),
