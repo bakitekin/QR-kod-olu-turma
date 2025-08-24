@@ -4,9 +4,10 @@ const ALLOWED_FORMATS = new Set(["png", "pdf"]);
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { format: string } }
+  context: { params: Promise<{ format: string }> }
 ) {
-  const format = (params?.format || "").toLowerCase();
+  const { format: rawFormat } = await context.params;
+  const format = (rawFormat || "").toLowerCase();
   if (!ALLOWED_FORMATS.has(format)) {
     return new Response(
       JSON.stringify({ error: "Geçersiz format" }),
