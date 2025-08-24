@@ -6,5 +6,7 @@
 [build.environment]
   NODE_VERSION = "20"
   NEXT_TELEMETRY_DISABLED = "1"
+  # Netlify Secrets Controller: İstemciye açık olması beklenen anahtarları taramadan hariç tut
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_API_BASE"
 
 
