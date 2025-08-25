@@ -39,20 +39,41 @@ CANVAS_SIZE = (int(WIDTH_CM * CM_TO_INCH * DPI), int(HEIGHT_CM * CM_TO_INCH * DP
 
 
 def build_vcard(name: str, phone: str) -> str:
+    # Android tarafında daha geniş uyumluluk için vCard 2.1 ve CRLF kullan
     phone_e164 = phone if phone.startswith("+") else "+90" + phone
+    crlf = "\r\n"
     return (
-        "BEGIN:VCARD\n"
-        "VERSION:3.0\n"
-        f"FN;CHARSET=UTF-8:{name}\n"
-        f"TEL;TYPE=CELL:{phone_e164}\n"
+        "BEGIN:VCARD" + crlf +
+        "VERSION:2.1" + crlf +
+        f"N:;{name};;;" + crlf +
+        f"FN:{name}" + crlf +
+        f"TEL;CELL:{phone_e164}" + crlf +
         "END:VCARD"
     )
 
 
-def generate_qr(data: str) -> Image.Image:
-    qr = qrcode.QRCode(
-        version=None, error_correction=ERROR_CORRECT_H, box_size=12, border=0
-    )
+def generate_qr_fit(data: str, max_w: int, max_h: int, extra_border_px: int = 0) -> Image.Image:
+    # QR'ı panel boyutuna tam uygun integer modül boyutunda üret; yeniden örnekleme yapma
+    # 1) Geçici QR oluştur, modül sayısını öğren
+    probe = qrcode.QRCode(version=None, error_correction=ERROR_CORRECT_H, box_size=1, border=4)
+    probe.add_data(data)
+    probe.make(fit=True)
+    modules = len(probe.get_matrix())  # kenardaki modüller hariç içerik sayısı
+    border_modules = 4
+
+    # 2) Maksimum kutu boyutu (box_size) piksel olarak hesapla
+    # Toplam genişlik (px) = (modules + 2*border) * box_size
+    avail_w = max(0, max_w - 2 * extra_border_px)
+    avail_h = max(0, max_h - 2 * extra_border_px)
+    box_by_w = avail_w // (modules + 2 * border_modules)
+    box_by_h = avail_h // (modules + 2 * border_modules)
+    box_size = int(min(box_by_w, box_by_h))
+
+    # Çok küçükse okunurluk riskli; minimum 6 px modül boyutunu hedefle
+    if box_size < 6:
+        box_size = 6
+
+    qr = qrcode.QRCode(version=None, error_correction=ERROR_CORRECT_H, box_size=box_size, border=border_modules)
     qr.add_data(data)
     qr.make(fit=True)
     return qr.make_image(fill_color="black", back_color="white").convert("RGB")
@@ -103,22 +124,20 @@ def compose_sticker(name: str, phone: str) -> Image.Image:
     inset = int(W * 0.008)
     panel = (inset, inset, W - 1 - inset, split_y - inset)
     inner_radius = max(radius - inset, 0)
-    # Beyaz panel yerine siyah panel: QR etrafında beyaz görünmesin
-    draw.rounded_rectangle(panel, radius=inner_radius, fill=BLACK)
+    # Paneli beyaz bırak: QR etrafında kontrastlı, temiz bir alan (quiet zone dışında da boşluk) olsun
+    draw.rounded_rectangle(panel, radius=inner_radius, fill=WHITE)
 
     # QR üret ve panel içine yerleştir
     vcard = build_vcard(name, phone)
-    qr_img = generate_qr(vcard)
     panel_w = panel[2] - panel[0]
     panel_h = panel[3] - panel[1]
-    # QR etrafındaki boşluk sıfıra yakın olsun
-    qr_padding = 1
-    max_qr_w = panel_w - 2 * qr_padding
-    max_qr_h = panel_h - 2 * qr_padding
-    base_scale = min(max_qr_w / qr_img.width, max_qr_h / qr_img.height)
-    # Çok az küçült (yaklaşık %3)
-    scale = max(0.1, base_scale * 0.92)
-    qr_img = qr_img.resize((int(qr_img.width * scale), int(qr_img.height * scale)), Image.LANCZOS)
+    # QR etrafında gözle görülür boşluk bırak (quiet zone'un dışında görsel boşluk)
+    qr_padding = int(min(panel_w, panel_h) * 0.10)
+    max_qr_w = max(10, panel_w - 2 * qr_padding)
+    max_qr_h = max(10, panel_h - 2 * qr_padding)
+
+    # Panel için uygun boyutta, ölçekleme yapmadan QR üret
+    qr_img = generate_qr_fit(vcard, max_qr_w, max_qr_h)
     qr_x = panel[0] + (panel_w - qr_img.width) // 2
     qr_y = panel[1] + (panel_h - qr_img.height) // 2
     canvas_img.paste(qr_img, (qr_x, qr_y))
